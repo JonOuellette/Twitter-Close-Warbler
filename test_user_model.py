@@ -7,7 +7,7 @@
 
 import os
 from unittest import TestCase
-
+from sqlalchemy import exc
 from models import db, User, Message, Follows
 
 # BEFORE we import our app, let's set an environmental variable
@@ -15,7 +15,7 @@ from models import db, User, Message, Follows
 # before we import our app, since that will have already
 # connected to the database
 
-os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
+os.environ.get('DATABASE_URL', 'postgresql://postgres:postgres@localhost/warbler-test')
 
 
 # Now we can import app
@@ -34,10 +34,48 @@ class UserModelTestCase(TestCase):
 
     def setUp(self):
         """Create test client, add sample data."""
+        db.drop_all()
+        db.create_all()
 
-        User.query.delete()
-        Message.query.delete()
-        Follows.query.delete()
+        # Create the first user
+        self.u1 = User.signup(
+            username="test1",
+            email="email1@email.com",
+            password="password",
+            image_url=None
+        )
+        self.uid1 = 100
+
+        # Manually set the ID for the first user
+        self.u1.id = self.uid1
+
+        # Create the second user
+        self.u2 = User.signup(
+            username="test2",
+            email="email2@email.com",
+            password="password",
+            image_url=None
+        )
+        self.uid2 = 101
+
+        # Manually set the ID for the second user
+        self.u2.id = self.uid2
+
+        # Commit the changes to the database
+        db.session.commit()
+
+        # Retrieve the users from the database
+        self.u1 = User.query.get(self.uid1)
+        self.u2 = User.query.get(self.uid2)
+
+        # Create a test client for making HTTP requests to the app
+        self.client = app.test_client()
+
+    
+    def tearDown(self):
+        """cleans up the database after each test"""
+        db.session.rollback()
+        db.session.remove()
 
         self.client = app.test_client()
 
@@ -56,3 +94,90 @@ class UserModelTestCase(TestCase):
         # User should have no messages & no followers
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
+
+
+    def test_user_follows(self):
+        """Tests if the following relationship"""
+        self.u1.following.append(self.u2)
+        db.session.commit()
+
+        self.assertEqual(len(self.u1.following), 1)
+        self.assertEqual(len(self.u2.followers), 1)
+        self.assertTrue(self.u1.is_following(self.u2))
+        self.assertTrue(self.u2.is_followed_by(self.u1))
+
+    def test_user_unfollows(self):
+        """Tests for unfollowing another user"""
+        self.u1.following.append(self.u2)
+        db.session.commit()
+
+        self.u1.following.remove(self.u2)
+        db.session.commit()
+
+        self.assertEqual(len(self.u1.following), 0)
+        self.assertEqual(len(self.u2.followers), 0)
+        self.assertFalse(self.u1.is_following(self.u2))
+        self.assertFalse(self.u2.is_followed_by(self.u1))
+
+
+    def test_is_following(self):
+        """Does is_following successfully detect when user1 is following user2?"""
+        self.u1.following.append(self.u2)
+        db.session.commit()
+        self.assertTrue(self.u1.is_following(self.u2))
+
+    def test_is_followed_by(self):
+        self.u1.following.append(self.u2)
+        db.session.commit()
+
+        self.assertTrue(self.u2.is_followed_by(self.u1))
+        self.assertFalse(self.u1.is_followed_by(self.u2))
+
+
+
+    def test_valid_isgnup(self):
+        u_test = User.signup("testnewuser", "newuser@email.com", "test123", None)
+        uid = 103
+        u_test.id = uid
+        db.session.commit()
+
+        u_test = User.query.get(uid)
+        self.assertEqual(u_test.username, "testnewuser")
+        self.assertEqual(u_test.email, "newuser@email.com")
+        #verifying that the hashed password is not stored in plaintext
+        self.assertNotEqual(u_test.password, "password")
+        self.assertTrue(u_test.password.startswith("$2b$"))
+
+    def test_invalid_username_signup(self):
+        invalid = User.signup(None, "test@test.com", "password", None)
+        uid = 999999999
+        invalid.id = uid
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+
+    def test_invalid_email_signup(self):
+        invalid = User.signup("testtest", None, "password", None)
+        uid = 8888888
+        invalid.id = uid
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+    
+    def test_invalid_password_signup(self):
+        with self.assertRaises(ValueError) as context:
+            User.signup("testtest", "email@email.com", "", None)
+        
+        with self.assertRaises(ValueError) as context:
+            User.signup("testtest", "email@email.com", None, None)
+
+
+    def test_valid_authentication(self):
+        u = User.authenticate(self.u1.username, "password")
+        self.assertIsNotNone(u)
+        self.assertEqual(u.id, self.uid1)
+    
+    def test_invalid_username(self):
+        self.assertFalse(User.authenticate("badusername", "password"))
+
+    def test_wrong_password(self):
+        self.assertFalse(User.authenticate(self.u1.username, "badpassword"))
+    

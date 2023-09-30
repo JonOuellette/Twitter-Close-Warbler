@@ -156,7 +156,7 @@ def users_show(user_id):
     
     likes= [message.id for message in user.likes]
 
-    return render_template('users/show.html', user=user, messages=messages)
+    return render_template('users/show.html', user=user, messages=messages, likes=likes)
 
 
 @app.route('/users/<int:user_id>/following')
@@ -212,7 +212,7 @@ def stop_following(follow_id):
 
     return redirect(f"/users/{g.user.id}/following")
 
-@app.route('users/<int:user_id>/likes')
+@app.route('/users/<int:user_id>/likes')
 def show_likes(user_id):
     if not g.user:
         flash("Access unauthorized,","danger")

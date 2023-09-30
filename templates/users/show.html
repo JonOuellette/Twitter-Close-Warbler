@@ -18,7 +18,7 @@
             <p>{{ message.text }}</p>
           </div>
           {% if g.user.id != message.user.id %}
-          <form action="/messages/{{message.id}}/like" class="messages-like" methods="POST">
+          <form action="/messages/{{message.id}}/like" class="messages-like" method="POST">
             <button class = btn btn-sm>
               {% if message.id in likes %}
               <i class="fa-solid fa-heart" style="color: #ff0000;"></i>

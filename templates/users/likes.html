@@ -17,7 +17,7 @@
                     </div>
                     {% if user.id == g.user.id %}
                     <form class="message-likes"  action="/messages/{{msg.id}}/like" methods="POST">
-                        <button class="btn btn-sm"><i class="fas fa-heart" style="color: #ff0000;"></i></button>
+                        <button class="btn btn-sm"><i class="fa-solid fa-heart" style="color: #ff0000;"></i></button>
                     </form>
                     {% endif %}    
                 </li>

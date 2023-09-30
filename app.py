@@ -333,7 +333,7 @@ def homepage():
         messages = (Message
                     .query
                     .join(User, Message.user_id == User.id)
-                    .filter(Message.user.id.in_(following_ids))
+                    .filter(Message.user_id.in_(following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())

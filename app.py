@@ -142,9 +142,8 @@ def list_users():
 @app.route('/users/<int:user_id>')
 def users_show(user_id):
     """Show user profile."""
-
+        
     user = User.query.get_or_404(user_id)
-
     # snagging messages in order from the database;
     # user.messages won't be in order by default
     messages = (Message
@@ -212,31 +211,31 @@ def stop_following(follow_id):
 
     return redirect(f"/users/{g.user.id}/following")
 
-@app.route('/users/<int:user_id>/likes')
+@app.route('/users/<int:user_id>/likes', methods=['GET'])
 def show_likes(user_id):
     if not g.user:
-        flash("Access unauthorized,","danger")
+        flash("Access unauthorized.", "danger")
         return redirect("/")
-    
+
     user = User.query.get_or_404(user_id)
     return render_template('users/likes.html', user=user, likes=user.likes)
 
 @app.route('/messages/<int:message_id>/like', methods=['POST'])
 def add_like(message_id):
+    """Allows logged-in users to toggle likes for a message."""
 
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-    
-    liked_message= Message.query.get_or_404(message_id)
+
+    liked_message = Message.query.get_or_404(message_id)
     if liked_message.user_id == g.user.id:
         return abort(403)
-    
+
     user_likes = g.user.likes
 
     if liked_message in user_likes:
         g.user.likes = [like for like in user_likes if like != liked_message]
-    
     else:
         g.user.likes.append(liked_message)
 
@@ -360,7 +359,9 @@ def homepage():
                     .limit(100)
                     .all())
 
-        return render_template('home.html', messages=messages)
+        liked_msg_ids = [msg.id for msg in g.user.likes]
+
+        return render_template('home.html', messages=messages, likes=liked_msg_ids)
 
     else:
         return render_template('home-anon.html')

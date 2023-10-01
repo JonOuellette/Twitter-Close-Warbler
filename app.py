@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, g, abort
+from flask import Flask, render_template, request, flash, redirect, session, g, abort, url_for
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = (
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = True
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
 toolbar = DebugToolbarExtension(app)
 
@@ -84,7 +84,7 @@ def signup():
 
         do_login(user)
 
-        return redirect("/")
+        return redirect(url_for('homepage'))
 
     else:
         return render_template('users/signup.html', form=form)
@@ -103,7 +103,7 @@ def login():
         if user:
             do_login(user)
             flash(f"Hello, {user.username}!", "success")
-            return redirect("/")
+            return redirect(url_for("homepage"))
 
         flash("Invalid credentials.", 'danger')
 
@@ -117,7 +117,7 @@ def logout():
     do_logout()
 
     flash("You have successfully logged out.", 'success')
-    return redirect("/login")
+    return redirect(url_for("login"))
 
 ##############################################################################
 # General user routes:
@@ -164,7 +164,7 @@ def show_following(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("login"))
 
     user = User.query.get_or_404(user_id)
     return render_template('users/following.html', user=user)
@@ -176,7 +176,7 @@ def users_followers(user_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("login"))
 
     user = User.query.get_or_404(user_id)
     return render_template('users/followers.html', user=user)
@@ -188,13 +188,13 @@ def add_follow(follow_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("login"))
 
     followed_user = User.query.get_or_404(follow_id)
     g.user.following.append(followed_user)
     db.session.commit()
 
-    return redirect(f"/users/{g.user.id}/following")
+    return redirect(url_for('show_following', user_id=g.user.id))
 
 
 @app.route('/users/stop-following/<int:follow_id>', methods=['POST'])
@@ -203,19 +203,19 @@ def stop_following(follow_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("login"))
 
     followed_user = User.query.get(follow_id)
     g.user.following.remove(followed_user)
     db.session.commit()
 
-    return redirect(f"/users/{g.user.id}/following")
+    return redirect(url_for('show_following', user_id=g.user.id))
 
 @app.route('/users/<int:user_id>/likes', methods=['GET'])
 def show_likes(user_id):
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("login"))
 
     user = User.query.get_or_404(user_id)
     return render_template('users/likes.html', user=user, likes=user.likes)
@@ -226,7 +226,7 @@ def add_like(message_id):
 
     if not g.user:
         flash("Access unauthorized.", "danger")
-        return redirect("/")
+        return redirect(url_for("login"))
 
     liked_message = Message.query.get_or_404(message_id)
     if liked_message.user_id == g.user.id:
@@ -265,7 +265,7 @@ def edit_profile():
 
             db.session.commit()
 
-            return redirect(f"/users/{user.id}")
+            return redirect(url_for('users_show', user_id=user.id))
         
         flash("Wrong password, please try again.", 'danger')
     

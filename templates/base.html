@@ -20,7 +20,7 @@
 <nav class="navbar navbar-expand">
   <div class="container-fluid">
     <div class="navbar-header">
-      <a href="/" class="navbar-brand">
+      <a href="{{ url_for('homepage') }}" class="navbar-brand">
         <img src="/static/images/warbler-logo.png" alt="logo">
         <span>Warbler</span>
       </a>
@@ -28,7 +28,7 @@
     <ul class="nav navbar-nav navbar-right">
       {% if request.endpoint != None %}
       <li>
-        <form class="navbar-form navbar-right" action="/users">
+        <form class="navbar-form navbar-right" action="{{ url_for('list_users') }}">
           <input name="q" class="form-control" placeholder="Search Warbler" id="search">
           <button class="btn btn-default">
             <span class="fa fa-search"></span>
@@ -37,16 +37,16 @@
       </li>
       {% endif %}
       {% if not g.user %}
-      <li><a href="/signup">Sign up</a></li>
-      <li><a href="/login">Log in</a></li>
+      <li><a href="{{ url_for('signup') }}">Sign up</a></li>
+      <li><a href="{{ url_for('login') }}">Log in</a></li>
       {% else %}
       <li>
-        <a href="/users/{{ g.user.id }}">
+        <a href="{{ url_for('users_show', user_id=g.user.id) }}">
           <img src="{{ g.user.image_url }}" alt="{{ g.user.username }}">
         </a>
       </li>
-      <li><a href="/messages/new">New Message</a></li>
-      <li><a href="/logout">Log out</a></li>
+      <li><a href="{{ url_for('messages_add') }}">New Message</a></li>
+      <li><a href="{{ url_for('logout') }}">Log out</a></li>
       {% endif %}
     </ul>
   </div>
